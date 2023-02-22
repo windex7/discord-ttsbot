@@ -1,4 +1,6 @@
 import discord
+from discord.ext import tasks, commands
+#from discord_slash import SlashCommand, SlashContext
 from gtts import gTTS
 from gtts import lang
 #import AquesTalkPy
@@ -19,16 +21,26 @@ import subprocess
 
 import ttsutil
 import yukkuriutil
+import chatutil
+import statutil
 
-client = discord.Client()
+intents = discord.Intents.default()
+intents.message_content = True
 
-client_token = 'CLIENT_TOKEN'
+client = discord.Client(intents=intents)
+
+#slash_client = SlashCommand(client, sync_commands=True)
+
+client_token = 'INSERT CLIENT TOKEN HERE'
 mp3dir = 'mp3/'
 logdir = 'logs/'
+jsondir = 'json/'
 mp3fdir = os.getcwd() + r'\mp3'
 yukdir = os.getcwd() + r'\wav'
 msglogfilename = 'log.txt'
 msglogfiledir = logdir + msglogfilename
+jsonfilename = 'settings.txt'
+jsonfiledir = jsondir + jsonfilename
 
 ttsutil.clear_mp3(mp3fdir, '.mp3')
 ttsutil.clear_mp3(yukdir, '.wav')
@@ -40,6 +52,8 @@ async def on_ready():
     global msglogfiledir
     msglogfilename = 'msg_' + datetime.datetime.now().strftime('%Y%m%d%H%M%S') + '.log'
     msglogfiledir = logdir + msglogfilename
+    ch = chatutil.ChatUtility(client, jsonfiledir)
+    ch.loop.start()
     print('Logged in!')
 
 @client.event
@@ -59,7 +73,6 @@ async def on_message(message):
             await ttsutil.delmsg(message, msglogfiledir)
             await client.logout()
             exit()
-            return
         elif message.content == '.f summon':
             state = message.author.voice
             if (not state) or (not state.channel):
@@ -77,7 +90,24 @@ async def on_message(message):
             await vc.disconnect()
             await ttsutil.delmsg(message, msglogfiledir)
             return
-
+        elif message.content.startswith('.f delmsg'):
+            msg = message.content[10:]
+            if msg.isdecimal():
+                len = int(msg)
+                await chatutil.deletemessages(message.channel, len+1)
+            return
+        elif message.content.startswith('.f emojistat'):
+            st = statutil.StatUtility(client)
+            await st.getemojistat(message.channel)
+            return
+        elif message.content.startswith('.f testpurpose'):
+            # test method
+            msg = message.content[14:]
+            #await chatutil.chattext(msg, message.channel)
+            st = statutil.StatUtility(client)
+            await st.getemojistat(message.channel)
+            return
+    
     if message.content.startswith('.'):
         defaultlang = 'ja'
         defaultnumlang = 'en'
@@ -153,5 +183,9 @@ async def on_message(message):
 
         await ttsutil.delmsg(message, msglogfiledir)
         return
+
+    #@slash_client.slash(name="alarm", description="manage alarm settings")
+    #async def alarm(ctx: SlashContext, *args):
+    #    return
 
 client.run(client_token)
