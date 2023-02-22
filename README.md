@@ -11,3 +11,5 @@ langdetect
 gTTS
 
 AquesTalk.dll
+
+MeCab
